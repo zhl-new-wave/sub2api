@@ -12,13 +12,17 @@
 
 1. 向管理员申请个人账号和可用分组；首次登录后修改初始密码。
 2. 在网页的「API 密钥」中创建个人 Key，核对模型、额度和有效期。
-3. 按[用户指南](docs/lab-users.md)将 Key 保存到本机私有凭据文件，然后在本仓库运行：
+3. 在所用客户端中选择 OpenAI 兼容接口或自定义提供商，直接填写：
 
-```bash
-python3 deploy/digitalocean/codex-lab.py --cd /path/to/project '阅读 README.md，用一句话说明项目用途'
-```
+| 配置项 | 填写内容 |
+|---|---|
+| `base_url` | `https://api.zhllabhub.com/v1` |
+| `api_key` | 你在本网站创建的个人 Lab API Key |
+| `model` | 所在分组允许使用的模型 |
 
-需要 Python 3 和 Codex CLI；该脚本是只读试跑，默认禁用联网搜索。普通 API 调用、日常 Codex 配置和故障排查见[用户指南](docs/lab-users.md)。网关 Key 与 OpenAI/ChatGPT 登录凭据分别管理。
+按普通第三方 API 服务接入即可，凭据由客户端按自身方式管理。日常 Codex 配置和故障排查见[用户指南](docs/lab-users.md)。使用个人 Lab Key，无需向客户端提供上游账号授权。
+
+本地 JSON 凭据文件和仓库内的 `codex-lab.py` 只读测试脚本均为**可选辅助工具**，用法见用户指南的可选部分。正常客户端接入无需克隆本仓库或运行 Python 脚本。
 
 ## 管理员入口
 

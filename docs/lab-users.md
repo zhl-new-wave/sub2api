@@ -6,7 +6,59 @@
 
 在「API 密钥」创建个人 Key，并核对它绑定的分组、额度、并发和有效期。每人使用自己的 Key；同一个人的独立实验也可分别建 Key 以追踪用量。这里的额度是网关计量单位，不等于订阅账号剩余额度或已经发生的现金支出。
 
-## 保存个人 Key
+## 默认接入：直接配置 API Key 和 Base URL
+
+将本服务作为普通第三方 API 服务使用。在所用客户端中选择 OpenAI 兼容接口或自定义提供商，填写：
+
+| 配置项 | 填写内容 |
+|---|---|
+| `base_url` / Base URL | `https://api.zhllabhub.com/v1` |
+| `api_key` / API Key | 你在本网站创建的个人 Lab API Key |
+| `model` / 模型 | 所在分组允许使用的模型，例如管理员已开放的 `gpt-6.1-sol` |
+
+客户端字段名称可能不同，按其设置页面或 SDK 的要求填写。Base URL 已含 `/v1`，客户端再追加具体接口路径。使用自己的 Lab Key，凭据由客户端按自身方式管理。
+
+**本地 JSON 凭据文件和本仓库测试脚本都是可选内容。** 直接配置客户端即可接入，无需克隆仓库或安装本项目的辅助脚本。下文先给出 Codex CLI 的原生配置，随后才介绍可选工具。
+
+## Codex CLI 原生配置
+
+Codex CLI 使用自身的 provider 配置和环境变量读取 Key。按当前 CLI 的 profile 文件机制，创建 `~/.codex/zhllabhub.config.toml`：
+
+```toml
+model = "gpt-6.1-sol"
+model_provider = "zhllabhub"
+model_reasoning_effort = "low"
+web_search = "disabled"
+
+[model_providers.zhllabhub]
+name = "ZHL Lab API Hub"
+base_url = "https://api.zhllabhub.com/v1"
+wire_api = "responses"
+env_key = "SUB2API_LAB_KEY"
+requires_openai_auth = false
+supports_websockets = false
+```
+
+模型需已对你的分组开放。通过环境变量提供个人 Key，再启动 Codex；例如在 macOS 的 zsh 或 bash 中安全输入，真实值不会写进命令历史：
+
+```bash
+printf '个人 Lab API Key: '
+read -rs SUB2API_LAB_KEY
+printf '\n'
+export SUB2API_LAB_KEY
+codex --profile zhllabhub
+unset SUB2API_LAB_KEY
+```
+
+如果已由密码管理器或终端环境注入 `SUB2API_LAB_KEY`，直接运行 `codex --profile zhllabhub`。这个接入方式使用 Codex 自身的配置，无需下文的 JSON 凭据文件或 `codex-lab.py`。
+
+交互式 Codex 按本机权限设置工作，可能申请执行命令或修改项目。Skills、MCP 和本地工具来自客户端配置；网关不会自动替客户端运行它们。上述 profile 关闭搜索，联网工具和命令网络权限是另行设置的事项。
+
+这些 provider/profile 设置应放在用户级文件中。不同版本的配置格式可能有差异，以 [OpenAI 配置文档](https://learn.chatgpt.com/docs/config-file/config-reference)、[CLI 参数](https://learn.chatgpt.com/docs/cli/reference)和[认证说明](https://learn.chatgpt.com/docs/auth?surface=cli)为准。
+
+## 可选：为测试脚本保存个人 Key
+
+如果希望运行下一节的 `codex-lab.py` 测试脚本，可以将 Key 存入它读取的本机 JSON 文件。已有 `SUB2API_LAB_KEY` 环境变量时也可以直接运行脚本，跳过保存文件。
 
 下面的命令在终端安全输入 Key，写入本机私有文件，不在命令历史中写入真实值。已有文件时拒绝覆盖。
 
@@ -29,9 +81,11 @@ PYKEY
 
 `getpass` 从终端读取，运行时需要交互式终端。文件默认为 `~/.config/zhllabhub/credentials.json`，也可使用其他私有路径并向脚本传 `--credentials`。Key 泄露时先在网页撤销，再创建新 Key。
 
-## Codex 只读试跑
+<a id="codex-只读试跑"></a>
 
-准备 Python 3 和 Codex CLI；验证过的客户端版本是 0.164.0。先运行 `codex --version` 确认安装，再在本仓库执行：
+## 可选：Codex 只读测试脚本
+
+此工具用于一次性检查接入与文件读取。选择使用它时，需要本仓库、Python 3 和 Codex CLI；验证过的客户端版本是 0.164.0。通过上一节的 JSON 文件或 `SUB2API_LAB_KEY` 环境变量提供 Key，然后在本仓库执行：
 
 ```bash
 python3 deploy/digitalocean/codex-lab.py --cd /path/to/project '读取 README.md，并说明项目入口'
@@ -48,44 +102,16 @@ python3 deploy/digitalocean/codex-lab.py --credentials /private/my-key.json --mo
 
 也可通过进程环境变量 `SUB2API_LAB_KEY` 提供 Key；它优先于凭据文件。不要提供 ChatGPT Cookie、上游 OAuth token 或管理员密码。
 
-## 日常使用交互式 Codex
+## 可选：普通 API 请求示例
 
-按当前 CLI 的 profile 文件机制，创建 `~/.codex/zhllabhub.config.toml`：
-
-```toml
-model = "gpt-6.1-sol"
-model_provider = "zhllabhub"
-model_reasoning_effort = "low"
-web_search = "disabled"
-
-[model_providers.zhllabhub]
-name = "ZHL Lab API Hub"
-base_url = "https://api.zhllabhub.com/v1"
-wire_api = "responses"
-env_key = "SUB2API_LAB_KEY"
-requires_openai_auth = false
-supports_websockets = false
-```
-
-从个人凭据文件注入环境变量并启动 profile，不将 Key 放入进程参数：
-
-```bash
-python3 -c 'import json, os, pathlib; p=pathlib.Path.home()/".config/zhllabhub/credentials.json"; os.environ["SUB2API_LAB_KEY"]=json.loads(p.read_text())["api_key"]; os.execvp("codex", ["codex", "--profile", "zhllabhub"])'
-```
-
-交互式 Codex 按本机权限设置工作，可能申请执行命令或修改项目。Skills、MCP 和本地工具来自客户端配置；网关不会自动替客户端运行它们。上述 profile 关闭搜索，联网工具和命令网络权限是另行设置的事项。
-
-这些 provider/profile 设置应放在用户级文件中。不同版本的配置格式可能有差异，以 [OpenAI 配置文档](https://learn.chatgpt.com/docs/config-file/config-advanced)、[CLI 参数](https://learn.chatgpt.com/docs/cli/reference)和[认证说明](https://learn.chatgpt.com/docs/auth?surface=cli)为准。
-
-## 普通 API 测试
-
-只需 Python 标准库，下面的请求使用同一份个人凭据，输出不包含 Key：
+此示例仅用于检查实际 API 响应，需要 Python 标准库。运行时从终端输入个人 Key，无需本地 JSON 文件：
 
 ```bash
 python3 - <<'PYAPI'
-import json, urllib.request
-from pathlib import Path
-key = json.loads((Path.home()/'.config/zhllabhub/credentials.json').read_text())['api_key']
+import getpass, json, urllib.request
+key = getpass.getpass('个人 Lab API Key: ').strip()
+if not key:
+    raise SystemExit('Key 不能为空')
 payload = {
     'model': 'gpt-6.1-sol',
     'instructions': 'Answer briefly.',
