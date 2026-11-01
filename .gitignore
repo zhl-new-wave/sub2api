@@ -127,12 +127,14 @@ scripts
 .code-review-state
 #openspec/
 code-reviews/
-AGENTS.md
 backend/cmd/server/server
 deploy/docker-compose.override.yml
 .gocache/
 vite.config.js
 docs/*
+!docs/lab-users.md
+!docs/lab-admin.md
+!docs/lab-maintenance.md
 !docs/PAYMENT.md
 !docs/PAYMENT_CN.md
 !docs/ADMIN_PAYMENT_INTEGRATION_API.md
@@ -161,3 +163,14 @@ issues/
 .vite/
 # 本地闭源插件开发目录及构建产物不进入 Sub2API 仓库
 /plugins/
+
+# Lab runtime state and credentials belong outside Git.
+**/__pycache__/
+*.pyc
+*.age
+*.dump
+*-secrets.json
+admin-credentials.txt
+backup-read-key
+backup-age-identity.txt
+/reports/

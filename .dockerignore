@@ -68,6 +68,19 @@ temp/
 # Deploy files (not needed in image)
 deploy/install.sh
 deploy/sub2api.service
+
+# Lab host state and credentials must never enter an image build context.
+deploy/digitalocean/data/
+deploy/digitalocean/backups/
+deploy/digitalocean/migration/
+deploy/digitalocean/config-history/
+**/admin-credentials.txt
+**/*-secrets.json
+**/backup-read-key
+**/backup-age-identity.txt
+**/*.age
+**/*.dump
+reports/
 deploy/sub2api-sudoers
 deploy/data/
 deploy/postgres_data/

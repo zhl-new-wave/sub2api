@@ -1,0 +1,13 @@
+{
+  "application_version": "0.2.18",
+  "source_repository": "https://github.com/Wei-Shaw/sub2api",
+  "source_tag": "v0.2.18",
+  "source_commit": "ac1b8f1271be0d674fa6f074403c1410f30a3a81",
+  "verified_platform": "linux/amd64",
+  "images": {
+    "APP_IMAGE": "ghcr.io/wei-shaw/sub2api@sha256:468a0b0e541e4becc05f1cf57826159235ea27a49a09f3dc2da6a43fcc05a22d",
+    "POSTGRES_IMAGE": "postgres@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5",
+    "REDIS_IMAGE": "redis@sha256:21090af93f8324db2f0f0f4f38a7c60369d47d917e000c3423d89d2ae2883537",
+    "CADDY_IMAGE": "caddy@sha256:e70b164da81ef698b3ad19af799ea6086ce6d9e48ed4079eb9fe26f6fbf14ee5"
+  }
+}

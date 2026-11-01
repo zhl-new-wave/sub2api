@@ -1,0 +1,56 @@
+# Use together with compose.yaml after private setup and DNS are complete.
+services:
+  sub2api:
+    environment:
+      SERVER_FRONTEND_URL: https://${PUBLIC_HOST:?set PUBLIC_HOST in .env}
+      # Only Caddy may supply the original client IP. Disable the legacy mode
+      # that trusts raw forwarded headers without validating the proxy.
+      SERVER_TRUSTED_PROXIES: 172.28.80.2/32
+      SECURITY_TRUST_FORWARDED_IP_FOR_API_KEY_ACL: "false"
+    networks:
+      default: {}
+      ingress:
+        ipv4_address: 172.28.80.3
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2-alpine}
+    restart: unless-stopped
+    mem_limit: 128m
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?set PUBLIC_HOST to your DNS hostname in .env}
+      PUBLIC_APEX: ${PUBLIC_APEX:?set PUBLIC_APEX to your root domain in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./data/caddy:/data
+      - ./data/caddy-config:/config
+    depends_on:
+      sub2api:
+        condition: service_healthy
+    networks:
+      ingress:
+        ipv4_address: 172.28.80.2
+    healthcheck:
+      test: [CMD, wget, -q, -T, "5", -O, /dev/null, "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
+
+# Caddy cannot connect directly to PostgreSQL or Redis. Its stable IP also
+# makes the app's trusted-proxy configuration independent of container restarts.
+networks:
+  ingress:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.80.0/29

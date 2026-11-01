@@ -1,0 +1,118 @@
+name: sub2api-lab
+
+# Private bootstrap: only the app's loopback port is published.
+# PostgreSQL and Redis are reachable through the Compose network only.
+services:
+  sub2api:
+    image: ${APP_IMAGE:-ghcr.io/wei-shaw/sub2api:0.2.18}
+    restart: unless-stopped
+    init: true
+    mem_limit: 768m
+    cpus: 1.25
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "127.0.0.1:${APP_PORT:-18080}:8080"
+    volumes:
+      - ./data/app:/app/data
+    environment:
+      AUTO_SETUP: "true"
+      SERVER_HOST: 0.0.0.0
+      SERVER_PORT: "8080"
+      SERVER_MODE: release
+      RUN_MODE: standard
+      TZ: Asia/Shanghai
+      GOMEMLIMIT: 640MiB
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?run initialize.py first}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?run initialize.py first}
+      JWT_SECRET: ${JWT_SECRET:?run initialize.py first}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?run initialize.py first}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: "5432"
+      DATABASE_USER: sub2api
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?run initialize.py first}
+      DATABASE_DBNAME: sub2api
+      DATABASE_SSLMODE: disable
+      DATABASE_MAX_OPEN_CONNS: "20"
+      DATABASE_MAX_IDLE_CONNS: "5"
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?run initialize.py first}
+      REDIS_DB: "0"
+      REDIS_POOL_SIZE: "32"
+      REDIS_MIN_IDLE_CONNS: "2"
+      SECURITY_URL_ALLOWLIST_ENABLED: "true"
+      SECURITY_URL_ALLOWLIST_ALLOW_INSECURE_HTTP: "false"
+      SECURITY_URL_ALLOWLIST_ALLOW_PRIVATE_HOSTS: "false"
+      SECURITY_URL_ALLOWLIST_UPSTREAM_HOSTS: api.openai.com,chatgpt.com,auth.openai.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, wget, -q, -T, "5", -O, /dev/null, "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 30s
+    logging: &small_logs
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "3"
+
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18-alpine}
+    restart: unless-stopped
+    mem_limit: 384m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: sub2api
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run initialize.py first}
+      POSTGRES_DB: sub2api
+      PGDATA: /var/lib/postgresql/18/docker
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/postgres:/var/lib/postgresql
+    command: [postgres, -c, shared_buffers=64MB, -c, work_mem=2MB, -c, maintenance_work_mem=32MB, -c, max_connections=40]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U sub2api -d sub2api && psql -U sub2api -d sub2api -Atqc 'SELECT 1' >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    logging: *small_logs
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:8-alpine}
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.25
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?run initialize.py first}
+      TZ: Asia/Shanghai
+    command:
+      - redis-server
+      - --requirepass
+      - ${REDIS_PASSWORD:?run initialize.py first}
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 64mb
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    logging: *small_logs

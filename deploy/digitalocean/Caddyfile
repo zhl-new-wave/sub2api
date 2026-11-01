@@ -1,0 +1,10 @@
+{$PUBLIC_APEX} {
+    redir https://{$PUBLIC_HOST}{uri} 308
+}
+
+{$PUBLIC_HOST} {
+    reverse_proxy sub2api:8080 {
+        flush_interval -1
+        header_up X-Real-IP {remote_host}
+    }
+}

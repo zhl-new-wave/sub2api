@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd /opt/sub2api
+task_compose=(docker compose -f compose.yaml)
+if [[ -f .https-enabled ]]; then task_compose+=(-f compose.https.yaml); fi
+case "${1:-status}" in
+  status)
+    "${task_compose[@]}" ps
+    curl --noproxy '*' --fail --silent --show-error --max-time 10 http://127.0.0.1:18080/health
+    printf '\n'
+    if [[ -f .https-enabled ]]; then python3 /opt/sub2api/health.py; fi
+    python3 -c 'from pathlib import Path; p=Path("backups/last-success.json"); print(p.read_text() if p.exists() else "No completed backup")'
+    df -h /opt/sub2api
+    ;;
+  backup) exec python3 /opt/sub2api/backup.py ;;
+  logs) exec "${task_compose[@]}" logs --tail 100 -f sub2api ;;
+  restart)
+    "${task_compose[@]}" restart sub2api
+    "${task_compose[@]}" up -d --wait --wait-timeout 180
+    ;;
+  up) exec "${task_compose[@]}" up -d --wait --wait-timeout 180 ;;
+  stop) exec "${task_compose[@]}" stop --timeout 90 ;;
+  *) echo 'Usage: sub2api-lab {status|backup|logs|restart|up|stop}' >&2; exit 2 ;;
+esac

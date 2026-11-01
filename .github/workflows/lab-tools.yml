@@ -1,0 +1,42 @@
+name: Lab deployment tools
+
+on:
+  push:
+    paths:
+      - 'deploy/digitalocean/**'
+      - 'docs/lab-*.md'
+      - 'README.md'
+      - 'AGENTS.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - '.github/workflows/lab-tools.yml'
+  pull_request:
+    paths:
+      - 'deploy/digitalocean/**'
+      - 'docs/lab-*.md'
+      - 'README.md'
+      - 'AGENTS.md'
+      - '.gitignore'
+      - '.dockerignore'
+      - '.github/workflows/lab-tools.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check Python syntax and backup integrity tests
+        run: |
+          python -m compileall -q deploy/digitalocean
+          python -m unittest discover -s deploy/digitalocean -p 'test_*.py' -v
+      - name: Check maintenance shell syntax
+        run: |
+          bash -n deploy/digitalocean/labctl
+          bash -n deploy/digitalocean/install-docker-ubuntu.sh
+          bash -n deploy/digitalocean/install-maintenance.sh
