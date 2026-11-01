@@ -97,13 +97,15 @@ PUBLIC_APEX=zhllabhub.com
 1. `pg_dump -Fc`，在临时数据库完整执行 `pg_restore`。
 2. 打包数据库、固定密钥、应用文件、Compose、运维脚本和 Caddy 状态。
 3. 用 age 公钥加密后发布，记录大小、SHA256 和恢复验证结果。
-4. 主机保留最近 30 个完成恢复点。另由独立接收端拉取异地副本。
+4. 主机保留最近 30 个完成恢复点。DigitalOcean 平台自动快照独立管理，管理员应在控制台核对成功状态和恢复点。
+
+当前没有自动拉取备份的独立接收端。每日逻辑备份与运行数据在同一主机上，平台快照提供另一条整机恢复路径；如需独立保管加密副本，可按下节配置接收端。清理前已额外将最新加密恢复点复制到维护者电脑并核对 SHA256。
 
 **age 解密私钥仅由实验室维护者离线/密码库保管，不放在服务器、接收端或 Git。** 丢失私钥无法解密备份。生产现有 recipient 应保留；恢复前不要用新的公私钥对替换它。
 
-检查 `backups/last-success.json`、systemd 日志及接收端 `last-success.json`。新主机需要安装 Docker、Python 3 和 age；`install-maintenance.sh` 仅在应用恢复及验证完成后启用定时任务。
+检查 `backups/last-success.json`、systemd 日志和平台快照状态；若配置了可选接收端，还需检查其 `last-success.json`。新主机需要安装 Docker、Python 3 和 age；`install-maintenance.sh` 仅在应用恢复及验证完成后启用定时任务。
 
-### 通用异地接收端
+### 可选的通用异地接收端
 
 `backup-pull.py` 可部署到维护者管理的 Linux/macOS 主机，不依赖固定中间主机。它使用独立只读 SSH Key，服务端强制命令只允许导出最新加密包。
 
@@ -119,7 +121,7 @@ restrict,command="/usr/local/sbin/sub2api-backup-export" ssh-ed25519 REPLACE_WIT
 python3 backup-pull.py   --host root@api.zhllabhub.com   --identity /private/sub2api-backup-read-key   --known-hosts /private/sub2api-known-hosts   --directory /private/sub2api-backups
 ```
 
-需要代理时可显式传 `--proxy-command`，默认使用直接连接。脚本验证包结构、备份时间、文件大小和 SHA256，最多保留 35 个恢复点。使用接收端自己的 scheduler 定时运行，并验证收取结果。现有生产接收任务单独管理；清理仓库不会停用它，更换接收端前应先验证替代副本。
+需要代理时可显式传 `--proxy-command`，默认使用直接连接。脚本验证包结构、备份时间、文件大小和 SHA256，最多保留 35 个恢复点。使用接收端自己的 scheduler 定时运行，并验证收取结果。此脚本保留在仓库中供今后需要时使用，当前没有对应的生产接收任务。
 
 ## 恢复到新主机
 
